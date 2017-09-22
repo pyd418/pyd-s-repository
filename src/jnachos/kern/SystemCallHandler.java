@@ -7,10 +7,15 @@
  */
 package jnachos.kern;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import jnachos.filesystem.OpenFile;
 import jnachos.machine.*;
 
 /** The class handles System calls made from user programs. */
 public class SystemCallHandler {
+	
 	/** The System call index for halting. */
 	public static final int SC_Halt = 0;
 
@@ -62,9 +67,12 @@ public class SystemCallHandler {
 	 *         Machine.java
 	 **/
 	public static void handleSystemCall(int pWhichSysCall) {
+		
 
 		Debug.print('a', "!!!!" + Machine.read1 + "," + Machine.read2 + "," + Machine.read4 + "," + Machine.write1 + ","
 				+ Machine.write2 + "," + Machine.write4);
+		
+		System.out.println("SysCall:" + pWhichSysCall);
 
 		switch (pWhichSysCall) {
 		// If halt is received shut down
@@ -75,17 +83,142 @@ public class SystemCallHandler {
 
 		case SC_Exit:
 			// Read in any arguments from the 4th register
+			System.out.println("Current process:"+JNachos.getCurrentProcess().getName()+" called SC_Exit.");
 			int arg = Machine.readRegister(4);
 
 			System.out
 					.println("Current Process " + JNachos.getCurrentProcess().getName() + " exiting with code " + arg);
-
-			// Finish the invoking process
-			JNachos.getCurrentProcess().finish();
+			
+			Object waitingProcess=ProcessId.IdMap.get(JNachos.getCurrentProcess().getId());
+			if(waitingProcess != null) {
+				
+				Machine.writeRegister(Machine.PCReg,Machine.readRegister(Machine.NextPCReg));
+				// Finish the invoking process
+				Scheduler.readyToRun((NachosProcess)ProcessId.IdMap.get(JNachos.getCurrentProcess().getId()));
+				JNachos.getCurrentProcess().finish();
+			}
+			else {
+				
+				Machine.writeRegister(Machine.PCReg,Machine.readRegister(Machine.NextPCReg));
+				JNachos.getCurrentProcess().finish();
+			}
+			
 			break;
 
 		case SC_Fork:
-			NachosProcess child=new NachosProcess("Fork process");
+			Interrupt.setLevel(false);	
+			System.out.println("Current process:"+JNachos.getCurrentProcess().getName()+" called SC_Fork.");
+			
+			Machine.writeRegister(2, 0);
+			
+			NachosProcess child=new NachosProcess("The child of "+JNachos.getCurrentProcess().getName());
+			
+			
+			
+			AddrSpace ChildAddrSpace=new AddrSpace(JNachos.getCurrentProcess().getSpace());
+			child.setSpace(ChildAddrSpace);
+			
+			int pc_counter=Machine.readRegister(Machine.NextPCReg);
+			Machine.writeRegister(Machine.PCReg,pc_counter);
+			
+			//pc+4 before the save user state
+			child.saveUserState();
+			
+			Machine.writeRegister(2, child.getId());
+			
+			child.fork(new ForkProcess(), child);
+			System.out.println("The Reg is:"+Machine.readRegister(4));
+			
+//			int pc_counter= Machine.readRegister(Machine.PCReg);
+//			Machine.writeRegister(Machine.PCReg, pc_counter+4);
+			
+			Interrupt.setLevel(true);
+			
+			break;
+			
+		case SC_Join:
+			Interrupt.setLevel(false);
+			System.out.println("Current process:"+JNachos.getCurrentProcess().getName()+" called SC_Join.");
+			
+			int SpecificId=Machine.readRegister(4);
+			System.out.println("The SpecificId is:"+ SpecificId);		
+						
+			if(ProcessId.IdMap.containsKey(SpecificId)!=true) {
+				System.out.println("Break the join");
+				pc_counter=Machine.readRegister(Machine.NextPCReg);
+				Machine.writeRegister(Machine.PCReg,pc_counter);
+				break;
+			}
+			else
+			{
+				ProcessId.IdMap.put(SpecificId,JNachos.getCurrentProcess());
+			
+				int JoinReturn=JNachos.getCurrentProcess().getId();
+				Machine.writeRegister(2, JoinReturn);
+				pc_counter=Machine.readRegister(Machine.NextPCReg);
+				Machine.writeRegister(Machine.PCReg,pc_counter);
+				
+				JNachos.getCurrentProcess().sleep();
+			
+			}
+//			NachosProcess invoke=JNachos.getCurrentProcess();
+			Interrupt.setLevel(true);			
+			break;
+			
+		case SC_Exec:
+			Interrupt.setLevel(false);
+			
+			System.out.println("Current process:"+JNachos.getCurrentProcess().getName()+" called SC_Exec.");
+			pc_counter=Machine.readRegister(Machine.NextPCReg);
+			Machine.writeRegister(Machine.PCReg,pc_counter);
+			
+			int FileAddr=Machine.readRegister(4);
+			int getMem=1;
+			List<Integer> FileList=new ArrayList<>();
+			String execFile=new String();
+			while ( (char)getMem!='\0' ) {
+				getMem=Machine.readMem(FileAddr, 1);
+				
+				if((char)getMem!='\0')
+					execFile=execFile+(char)getMem;
+				
+				FileAddr++;
+				FileList.add(getMem);
+			}
+			
+//			execFile="/eclipse-workspace/JNachos_Pro1/"+execFile;
+			
+			OpenFile executable = JNachos.mFileSystem.open(execFile);
+
+			// If the file does not exist
+			if (executable == null) {
+				System.out.println("Unable to open file: " + execFile);	
+				break;
+			}
+
+			// Load the file into the memory space
+			AddrSpace space = new AddrSpace(executable);
+			JNachos.getCurrentProcess().setSpace(space);
+
+			// set the initial register values
+			space.initRegisters();
+
+			// load page table register
+			space.restoreState();
+
+			System.out.println("Run the user program: "+execFile);
+			
+			// jump to the user progam
+			// machine->Run never returns;
+			Machine.run();
+			
+			
+			Interrupt.setLevel(true);
+			// the address space exits
+			// by doing the syscall "exit"
+		
+//			JNachos.getCurrentProcess().finish();
+			break;
 		default:
 			Interrupt.halt();
 			break;

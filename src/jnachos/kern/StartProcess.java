@@ -18,13 +18,7 @@ public class StartProcess implements VoidFunctionPtr{
 	@Override
 	public void call(Object pArg) {
 		// TODO Auto-generated method stub
-		if (Interrupt.getStatus() != Interrupt.IdleMode) {
-			// Yield on return
-			Interrupt.yieldOnReturn();
-		}
-	}
-	public StartProcess(String FileName) {
-		filename=FileName;
+		String filename=(String)pArg;
 		// The executable file to run
 		OpenFile executable = JNachos.mFileSystem.open(filename);
 
@@ -52,4 +46,5 @@ public class StartProcess implements VoidFunctionPtr{
 		// by doing the syscall "exit"
 		assert (false);
 	}
+	
 }

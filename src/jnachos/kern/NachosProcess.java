@@ -106,6 +106,8 @@ public class NachosProcess implements Runnable {
 		mUserRegisters = new int[Machine.NumTotalRegs];
 		
 		mid = ProcessId.getId();
+		ProcessId.IdMap.put(mid,null);
+		System.out.println("The id of the process \""+pProcessName+"\" is: "+ mid);
 	}
 
 	/**

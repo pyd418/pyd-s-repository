@@ -108,7 +108,7 @@ public class Main {
 		//new Water();
 		
 		//The processes test in the JNachos
-//		new ProcessTest();
+		//new ProcessTest();
 
 		// The number arguments
 		int argc = args.length;
@@ -137,9 +137,9 @@ public class Main {
 				
 				for(int i=0;i<length;i++) {
 					System.out.println(arguments[i]);
-					new NewProcess(arguments[i]);
-				}
-				
+					NachosProcess p = new NachosProcess(arguments[i]);
+					p.fork(new StartProcess(), arguments[i]);				
+				}				
 				argCount = 2;
 			}
 			// Run a console

@@ -17,7 +17,7 @@ public class NewProcess implements VoidFunctionPtr{
 	public NewProcess(String FileName) {
 		filename=FileName;
 		Debug.print('t', "Entering SimpleTest");
-		NachosProcess p = new NachosProcess("forked process" + filename);
+		NachosProcess p = new NachosProcess(filename);
 		p.fork(this, new Integer(1));
 	}
 
@@ -25,7 +25,7 @@ public class NewProcess implements VoidFunctionPtr{
 	public void call(Object pArg) {
 		// TODO Auto-generated method stub
 		System.out.println("run the user program "+filename);
-		new StartProcess(filename);
+		new StartProcess();
 	}
 
 }

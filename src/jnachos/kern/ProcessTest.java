@@ -38,7 +38,6 @@ public class ProcessTest implements VoidFunctionPtr {
 		// Fork off 5 threads to this class.
 		for (int i = 0; i < 5; i++) {
 			NachosProcess p = new NachosProcess("forked process" + i);
-			System.out.println(p.getId());
 			p.fork(this, new Integer(i));
 		}
 	}
